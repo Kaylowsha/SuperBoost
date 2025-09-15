@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MultiBoost - Reino Matemático</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-image: url('https://source.unsplash.com/random/1920x1080?medieval,castle');
+            background-size: cover;
+            background-attachment: fixed;
+        }
+        .option:hover, .hero:hover {
+            transform: scale(1.05);
+            transition: transform 0.2s;
+        }
+        .correct { animation: pulse 0.5s; background-color: green; }
+        .incorrect { animation: shake 0.5s; background-color: red; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen text-white font-sans">
+    <div class="bg-gray-900 bg-opacity-80 p-8 rounded-lg shadow-lg max-w-2xl w-full text-center">
+        <h1 class="text-4xl font-bold mb-4 text-yellow-400">⚡ MultiBoost: Reino Matemático ⚡</h1>
+        <p class="text-lg mb-6">¡Construye tu reino medieval resolviendo multiplicaciones! Inspírado en aventuras como Kingshot.</p>
+
+        <!-- Estadísticas del Reino -->
+        <div class="mb-6 grid grid-cols-3 gap-4">
+            <p>Puntos: <span id="score">0</span></p>
+            <p>Nivel: <span id="level">1</span></p>
+            <p>Población: <span id="population">10</span></p>
+            <p>Oro: <span id="gold">0</span> 🪙</p>
+            <p>Comida: <span id="food">0</span> 🍖</p>
+            <p>Salud del Reino: <span id="kingdom-health">100</span> ❤️</p>
+        </div>
+
+        <!-- Mapa del Reino -->
+        <canvas id="kingdom-map" width="400" height="200" class="mb-6 border-2 border-yellow-400"></canvas>
+        <button id="upgrade-kingdom" class="mb-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">🏰 Mejorar Reino (Costo: 100 Oro + 50 Comida)</button>
+
+        <!-- Gestión de Población -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-semibold mb-2">Gestiona tu Población</h2>
+            <select id="role-assign" class="p-2 bg-gray-800 rounded text-white">
+                <option value="worker">Trabajador (+Oro)</option>
+                <option value="hunter">Cazador (+Comida)</option>
+            </select>
+            <button id="assign-role" class="ml-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Asignar Rol</button>
+            <p>Trabajadores: <span id="workers">0</span> | Cazadores: <span id="hunters">0</span></p>
+        </div>
+
+        <!-- Héroes -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-semibold mb-2">Héroes Desbloqueados</h2>
+            <div id="heroes" class="grid grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Modos de Juego -->
+        <div id="modes">
+            <!-- Modo Básico -->
+            <div id="basic-mode" class="mb-8">
+                <h2 class="text-2xl font-semibold mb-4">Entrenamiento Básico: Tablas de Multiplicar</h2>
+                <select id="table-select" class="mt-2 p-2 bg-gray-800 rounded text-white">
+                    <option value="all">Todas las tablas (2-13)</option>
+                    <!-- Opciones del 2 al 13 como antes -->
+                </select>
+                <input type="number" id="exercise-count" class="mt-2 p-2 bg-gray-800 rounded text-white" placeholder="Ejercicios" min="1" max="50">
+                <p>Tiempo: <span id="timer">30</span>s</p>
+                <button id="start-basic" class="mt-4 bg-yellow-500 text-gray-900 px-4 py-2 rounded hover:bg-yellow-600">🚀 Comenzar</button>
+                <div id="question" class="mt-4 text-xl"></div>
+                <div id="options" class="mt-4 grid grid-cols-2 gap-4"></div>
+            </div>
+
+            <!-- Modo Avanzado -->
+            <div id="advanced-mode" class="mb-8 hidden">
+                <!-- Similar al anterior, con modo inverso -->
+            </div>
+
+            <!-- Modo Tower Defense -->
+            <div id="defense-mode" class="mb-8 hidden">
+                <h2 class="text-2xl font-semibold mb-4">Modo Tower Defense: ¡Defiende el Reino!</h2>
+                <p>Responde rápido para repeler invasores. Fallar reduce salud.</p>
+                <button id="start-defense" class="mt-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">🛡️ Iniciar Defensa</button>
+                <div id="defense-question" class="mt-4 text-xl"></div>
+                <div id="defense-options" class="mt-4 grid grid-cols-2 gap-4"></div>
+            </div>
+
+            <!-- Modo Memory -->
+            <div id="memory-mode" class="mb-8 hidden">
+                <h2 class="text-2xl font-semibold mb-4">Modo Memory: Encuentra Pares</h2>
+                <p>Empareja multiplicaciones con resultados.</p>
+                <button id="start-memory" class="mt-4 bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">🧠 Jugar Memory</button>
+                <div id="memory-grid" class="mt-4 grid grid-cols-4 gap-4"></div>
+            </div>
+
+            <!-- Modo Bingo -->
+            <div id="bingo-mode" class="mb-8 hidden">
+                <h2 class="text-2xl font-semibold mb-4">Modo Bingo: Marca tu Cartón</h2>
+                <p>Responde y marca números en tu cartón bingo.</p>
+                <button id="start-bingo" class="mt-4 bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">🎲 Iniciar Bingo</button>
+                <div id="bingo-card" class="mt-4 grid grid-cols-5 gap-2"></div>
+                <div id="bingo-question" class="mt-4 text-xl"></div>
+            </div>
+        </div>
+
+        <!-- Botones para Cambiar Modos -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <button id="switch-basic" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Básico</button>
+            <button id="switch-advanced" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Avanzado</button>
+            <button id="switch-defense" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Defensa</button>
+            <button id="switch-memory" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Memory</button>
+            <button id="switch-bingo" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Bingo</button>
+        </div>
+
+        <!-- Logros -->
+        <div class="mb-6">
+            <h2 class="text-2xl font-semibold mb-2">Logros</h2>
+            <ul id="achievements" class="list-disc list-inside"></ul>
+        </div>
+
+        <!-- Bono Diario -->
+        <button id="daily-bonus" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">📅 Reclamar Bono Diario</button>
+    </div>
+
+    <audio id="correct-sound" src="https://freesound.org/data/previews/397/397357_4284965-lq.mp3"></audio> <!-- Sonido correcto (free sound) -->
+    <audio id="incorrect-sound" src="https://freesound.org/data/previews/397/397358_4284965-lq.mp3"></audio> <!-- Sonido incorrecto -->
+
+    <script>
+        // Variables globales (expandidas)
+        let score = 0, level = 1, population = 10, gold = 0, food = 0, kingdomHealth = 100;
+        let workers = 0, hunters = 0;
+        let heroes = []; // [{name: 'Caballero', bonus: 'tiempo +5s'}]
+        let achievements = [];
+        let currentAnswer, timer, timeLeft = 30;
+        let kingdomLevel = 1; // Para el mapa
+        let lastDaily = localStorage.getItem('lastDaily') || null;
+
+        // Cargar progreso
+        function loadProgress() {
+            const saved = JSON.parse(localStorage.getItem('multiBoostProgress'));
+            if (saved) {
+                score = saved.score; level = saved.level; population = saved.population;
+                gold = saved.gold; food = saved.food; kingdomHealth = saved.kingdomHealth;
+                workers = saved.workers; hunters = saved.hunters;
+                heroes = saved.heroes; achievements = saved.achievements;
+                kingdomLevel = saved.kingdomLevel;
+            }
+            updateUI();
+            drawKingdom();
+        }
+
+        // Guardar progreso
+        function saveProgress() {
+            localStorage.setItem('multiBoostProgress', JSON.stringify({score, level, population, gold, food, kingdomHealth, workers, hunters, heroes, achievements, kingdomLevel}));
+        }
+
+        // Actualizar UI
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('population').textContent = population;
+            document.getElementById('gold').textContent = gold;
+            document.getElementById('food').textContent = food;
+            document.getElementById('kingdom-health').textContent = kingdomHealth;
+            document.getElementById('workers').textContent = workers;
+            document.getElementById('hunters').textContent = hunters;
+
+            // Héroes
+            const heroesDiv = document.getElementById('heroes');
+            heroesDiv.innerHTML = '';
+            heroes.forEach(hero => {
+                const div = document.createElement('div');
+                div.className = 'hero bg-gray-700 p-2 rounded';
+                div.textContent = `${hero.name} (${hero.bonus})`;
+                heroesDiv.appendChild(div);
+            });
+
+            // Logros
+            const achList = document.getElementById('achievements');
+            achList.innerHTML = '';
+            achievements.forEach(ach => {
+                const li = document.createElement('li');
+                li.textContent = ach;
+                achList.appendChild(li);
+            });
+        }
+
+        // Dibujar Mapa del Reino
+        function drawKingdom() {
+            const canvas = document.getElementById('kingdom-map');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Dibujo simple: castillo evolutivo
+            ctx.fillStyle = 'brown';
+            if (kingdomLevel === 1) {
+                ctx.fillRect(150, 100, 100, 100); // Choza
+            } else if (kingdomLevel === 2) {
+                ctx.fillRect(100, 80, 200, 120); // Torre
+                ctx.fillStyle = 'gray';
+                ctx.fillRect(140, 50, 120, 30); // Techo
+            } else {
+                ctx.fillRect(50, 50, 300, 150); // Fortaleza
+                ctx.fillStyle = 'gray';
+                ctx.fillRect(100, 20, 200, 30); // Murallas
+            }
+            // Agregar población como puntos
+            for (let i = 0; i < Math.min(population, 20); i++) {
+                ctx.fillStyle = 'blue';
+                ctx.beginPath();
+                ctx.arc(20 + i*15, 180, 5, 0, 2*Math.PI);
+                ctx.fill();
+            }
+        }
+
+        // Actualizar Score y Recursos
+        function updateScore(points) {
+            score += points;
+            if (points > 0) {
+                gold += 10 + workers * 2;
+                food += 10 + hunters * 2;
+                population += Math.floor(level / 5); // Crece población
+                document.getElementById('correct-sound').play();
+                checkHeroes();
+                checkAchievements();
+            } else {
+                document.getElementById('incorrect-sound').play();
+            }
+            if (score >= level * 100) {
+                level++;
+                addAchievement('¡Nivel ' + level + ' alcanzado!');
+            }
+            updateUI();
+            saveProgress();
+        }
+
+        // Desbloquear Héroes
+        function checkHeroes() {
+            if (level >= 2 && !heroes.find(h => h.name === 'Caballero')) {
+                heroes.push({name: 'Caballero', bonus: '+10% Puntos'});
+                addAchievement('¡Héroe Caballero desbloqueado!');
+            }
+            if (level >= 5 && !heroes.find(h => h.name === 'Arquero')) {
+                heroes.push({name: 'Arquero', bonus: '+5s Timer'});
+                addAchievement('¡Héroe Arquero desbloqueado!');
+            }
+            // Más héroes si quieres agregar
+        }
+
+        // Agregar Logros
+        function addAchievement(ach) {
+            if (!achievements.includes(ach)) {
+                achievements.push(ach);
+            }
+        }
+
+        // Bono Diario
+        document.getElementById('daily-bonus').onclick = () => {
+            const today = new Date().toDateString();
+            if (lastDaily !== today) {
+                gold += 50; food += 50;
+                lastDaily = today;
+                localStorage.setItem('lastDaily', today);
+                alert('¡Bono diario reclamado: +50 Oro y Comida!');
+                updateUI();
+                saveProgress();
+            } else {
+                alert('Ya reclamaste hoy. ¡Vuelve mañana!');
+            }
+        };
+
+        // Mejorar Reino
+        document.getElementById('upgrade-kingdom').onclick = () => {
+            if (gold >= 100 && food >= 50 && kingdomLevel < 3) {
+                gold -= 100; food -= 50;
+                kingdomLevel++;
+                addAchievement('¡Reino mejorado al nivel ' + kingdomLevel + '!');
+                drawKingdom();
+                updateUI();
+                saveProgress();
+            } else {
+                alert('¡Recursos insuficientes o máximo alcanzado!');
+            }
+        };
+
+        // Asignar Rol
+        document.getElementById('assign-role').onclick = () => {
+            if (population > workers + hunters) {
+                const role = document.getElementById('role-assign').value;
+                if (role === 'worker') workers++;
+                else hunters++;
+                addAchievement('¡Población asignada!');
+                updateUI();
+                saveProgress();
+            } else {
+                alert('¡No hay población libre!');
+            }
+        };
+
+        // Funciones de Modos (básico, avanzado como antes, agregando bonos de héroes)
+        // Para básico: timeLeft += heroes.find(h => h.name === 'Arquero') ? 5 : 0;
+        // Para puntos: points *= heroes.find(h => h.name === 'Caballero') ? 1.1 : 1;
+
+        // Modo Tower Defense
+        function startDefense() {
+            // Generar pregunta similar a básico, pero si fallas: kingdomHealth -= 10;
+            // Si health <=0, game over (reset parcial)
+            // ...
+        }
+        document.getElementById('start-defense').onclick = startDefense;
+
+        // Modo Memory: Generar grid de 8 cartas (4 pares: pregunta-respuesta)
+        // Al click, flip, match -> puntos
+
+        // Modo Bingo: Generar cartón 5x5 con números, preguntas random, marca si correcto
+
+        // Cambiar Modos (hide/show divs)
+
+        // Inicializar
+        loadProgress();
+        // Llenar select de tablas (2-13)
+        const tableSelect = document.getElementById('table-select');
+        for (let i = 2; i <= 13; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `Tabla del ${i}`;
+            tableSelect.appendChild(opt);
+        }
+
+        // ... (implementar el resto de funciones como generateQuestion, checkAnswer, etc., expandiendo con nuevas mecánicas)
+    </script>
+</body>
+</html>
